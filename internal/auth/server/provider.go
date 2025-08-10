@@ -3,17 +3,18 @@ package server
 import (
 	"net/http"
 	"net/url"
+
 	"trpc.group/trpc-go/trpc-mcp-go/internal/auth"
 )
 
 type AuthorizationParams struct {
-	//可选，nil表示未提供
+	CodeChallenge string // 必需
+	RedirectURI   string // 必需
+
 	//fixme oauth2.1推荐的是必选，但是目前为可选
-	State         *string
-	Scopes        []string // 可选，空切片表示未提供
-	CodeChallenge string   // 必需
-	RedirectUri   string   // 必需
-	Resource      *url.URL // 可选，nil表示未提供
+	State    string   //可选
+	Scopes   []string // 可选，空切片表示未提供
+	Resource *url.URL // 可选，nil表示未提供
 }
 
 // OAuthServerProvider 定义了一个完整的OAuth 2.1服务器接口，包含客户端管理、授权流程、令牌交换、验证和撤销等功能。
@@ -62,22 +63,17 @@ type OAuthServerProvider interface {
 	// Verifies an access token and returns information about it.
 	VerifyAccessToken(token string) (AuthInfo, error)
 
+	// OAuthServerProviderSupportTokenRevocation 是否支持令牌撤销。（可选）
+	OAuthServerProviderSupportTokenRevocation
+}
+
+type OAuthServerProviderSupportTokenRevocation interface {
 	// RevokeToken 撤销访问令牌或刷新令牌。如果未实现，则不支持令牌撤销（不推荐）。
 	// 如果给定的令牌无效或已被撤销，此方法应不执行任何操作。
 	// Revokes an access or refresh token. If unimplemented, token revocation is not supported (not recommended).
 	// If the given token is invalid or already revoked, this method should do nothing.
 	// 可选方法 / Optional method
 	RevokeToken(client auth.OAuthClientInformationFull, request auth.OAuthTokenRevocationRequest) error
-
-	// SkipLocalPkceValidation 是否跳过本地PKCE验证。
-	// 如果为true，服务器不会在本地执行PKCE验证，而是将code_verifier传递给上游服务器。
-	// 注意：仅当上游服务器执行实际的PKCE验证时，此值应为true。
-	// Whether to skip local PKCE validation.
-	// If true, the server will not perform PKCE validation locally and will pass the code_verifier to the upstream server.
-	// NOTE: This should only be true if the upstream server is performing the actual PKCE validation.
-	// 可选字段，默认false / Optional field, defaults to false
-	//fixme 改成实现的结构体字段，而不是接口方法，方便作为配置项扩展
-	SkipLocalPkceValidation() bool
 }
 
 type TokenVerifier interface {

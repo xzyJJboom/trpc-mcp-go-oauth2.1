@@ -1,5 +1,7 @@
 package auth
 
+import "net/http"
+
 // OAuthClientMetadata 定义OAuth客户端元数据的结构，基于OAuth 2.1规范。
 // Defines the structure for OAuth client metadata, based on OAuth 2.1 specification.
 type OAuthClientMetadata struct {
@@ -284,3 +286,5 @@ func (m OpenIdProviderDiscoveryMetadata) GetTokenEndpoint() string {
 func (m OpenIdProviderDiscoveryMetadata) GetResponseTypesSupported() []string {
 	return m.OpenIdProviderMetadata.ResponseTypesSupported
 }
+
+type FetchFunc func(url string, req *http.Request) (*http.Response, error)
