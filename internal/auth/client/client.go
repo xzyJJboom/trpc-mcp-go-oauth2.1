@@ -1,4 +1,4 @@
-package providers
+package client
 
 import (
 	"net/http"
@@ -14,11 +14,11 @@ import (
 // meaning of which is application-defined. Tokens, authorization codes, and
 // code verifiers should not cross different sessions.
 type OAuthClientProvider interface {
-	// RedirectURL 返回重定向用户代理的URL。
+	// RedirectURL getter,返回重定向用户代理的URL。
 	// The URL to redirect the user agent to after authorization.
 	RedirectURL() (*url.URL, error)
 
-	// ClientMetadata 返回此OAuth客户端的元数据。
+	// ClientMetadata getter,返回此OAuth客户端的元数据。
 	// Metadata about this OAuth client.
 	ClientMetadata() (auth.OAuthClientMetadata, error)
 
@@ -27,6 +27,7 @@ type OAuthClientProvider interface {
 	// Returns a OAuth2 state parameter, optional.
 	// If unimplemented, returns an empty string to indicate no state provided.
 	// 可选方法 / Optional method
+	//fixme 可选方法转配置选项
 	State() (string, error)
 
 	// ClientInformation 加载已注册到服务器的OAuth客户端信息。
@@ -44,6 +45,7 @@ type OAuthClientProvider interface {
 	// This method is not required to be implemented if client information is
 	// statically known (e.g., pre-registered).
 	// 可选方法 / Optional method
+	//fixme 可选方法转配置选项
 	SaveClientInformation(clientInformation auth.OAuthClientInformationFull) error
 
 	// Tokens 加载当前会话的现有OAuth令牌。
@@ -59,6 +61,7 @@ type OAuthClientProvider interface {
 
 	// RedirectToAuthorization 将用户代理重定向到给定的URL以开始授权流程。
 	// Invoked to redirect the user agent to the given URL to begin the authorization flow.
+	// fixme url结构体与ts SDK不一致
 	RedirectToAuthorization(authorizationUrl *url.URL) error
 
 	// SaveCodeVerifier 保存当前会话的PKCE代码验证器，在重定向到授权流程之前调用。
@@ -88,6 +91,7 @@ type OAuthClientProvider interface {
 	// - Adding custom headers for proprietary authentication schemes
 	// - Implementing client assertion-based authentication (e.g., JWT bearer tokens)
 	// 可选方法 / Optional method
+	//fixme 可选方法，metadata为可选
 	AddClientAuthentication(headers http.Header, params url.Values, urlStr string, metadata *auth.AuthorizationServerMetadata) error
 
 	// ValidateResourceURL 覆盖RFC 8707资源指示器的选择和验证，可选。
@@ -98,13 +102,16 @@ type OAuthClientProvider interface {
 	// validation behavior will be used.
 	// Implementations must verify the returned resource matches the MCP server.
 	// 可选方法 / Optional method
+	//fixme 可选方法，resource为可选
 	ValidateResourceURL(serverUrl string, resource string) (*url.URL, error)
 
 	// InvalidateCredentials 使指定的凭据失效（例如删除），在服务器指示凭据不再有效时调用，可选。
 	// 避免用户手动干预。
+	// scope: 'all' | 'client' | 'tokens' | 'verifier'
 	// If implemented, provides a way for the client to invalidate (e.g. delete) the specified
 	// credentials, in the case where the server has indicated that they are no longer valid.
 	// This avoids requiring the user to intervene manually.
 	// 可选方法 / Optional method
+	//fixme 可选方法
 	InvalidateCredentials(scope string) error
 }

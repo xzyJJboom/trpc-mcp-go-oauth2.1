@@ -1,12 +1,15 @@
-package auth
+package server
 
 import (
 	"net/http"
 	"net/url"
+	"trpc.group/trpc-go/trpc-mcp-go/internal/auth"
 )
 
 type AuthorizationParams struct {
-	State         *string  // 可选，nil表示未提供
+	//可选，nil表示未提供
+	//fixme oauth2.1推荐的是必选，但是目前为可选
+	State         *string
 	Scopes        []string // 可选，空切片表示未提供
 	CodeChallenge string   // 必需
 	RedirectUri   string   // 必需
@@ -17,7 +20,7 @@ type AuthorizationParams struct {
 // OAuthServerProvider defines a complete OAuth 2.1 server interface, including client management, authorization flow, token exchange, verification, and revocation.
 type OAuthServerProvider interface {
 
-	// ClientsStore 返回用于读取注册OAuth客户端信息的存储。
+	// ClientsStore getter函数:返回用于读取注册OAuth客户端信息的存储。
 	// A store used to read information about registered OAuth clients.
 	ClientsStore() OAuthClientsStore
 
@@ -25,34 +28,35 @@ type OAuthServerProvider interface {
 	// 服务器最终必须通过给定的重定向URI发出带有授权响应或错误响应的重定向。根据OAuth 2.1规范：
 	// - 成功情况下，重定向必须包含 `code` 和 `state`（如果提供）查询参数。
 	// - 错误情况下，重定向必须包含 `error` 查询参数，并可以包含可选的 `error_description` 查询参数。
+	// AuthorizationFlow的入口点，由服务器实现。
 	// Begins the authorization flow, which can either be implemented by this server itself or via redirection to a separate authorization server.
 	// This server must eventually issue a redirect with an authorization response or an error response to the given redirect URI. Per OAuth 2.1:
 	// - In the successful case, the redirect MUST include the `code` and `state` (if present) query parameters.
 	// - In the error case, the redirect MUST include the `error` query parameter, and MAY include an optional `error_description` query parameter.
-	Authorize(client OAuthClientInformationFull, params AuthorizationParams, res http.ResponseWriter) error
+	Authorize(client auth.OAuthClientInformationFull, params AuthorizationParams, res http.ResponseWriter) error
 
 	// ChallengeForAuthorizationCode 返回指定授权开始时使用的 codeChallenge 值。
 	// Returns the `codeChallenge` that was used when the indicated authorization began.
-	ChallengeForAuthorizationCode(client OAuthClientInformationFull, authorizationCode string) (string, error)
+	ChallengeForAuthorizationCode(client auth.OAuthClientInformationFull, authorizationCode string) (string, error)
 
 	// ExchangeAuthorizationCode 将授权码交换为访问令牌。
 	// Exchanges an authorization code for an access token.
 	ExchangeAuthorizationCode(
-		client OAuthClientInformationFull,
+		client auth.OAuthClientInformationFull,
 		authorizationCode string,
 		codeVerifier *string, // 可选，若为nil表示未提供 / Optional, nil if not provided
 		redirectUri *string, // 可选，若为nil表示未提供 / Optional, nil if not provided
 		resource *url.URL, // 可选，若为nil表示未提供 / Optional, nil if not provided
-	) (OAuthTokens, error)
+	) (auth.OAuthTokens, error)
 
 	// ExchangeRefreshToken 用刷新令牌交换新的访问令牌。
 	// Exchanges a refresh token for an access token.
 	ExchangeRefreshToken(
-		client OAuthClientInformationFull,
+		client auth.OAuthClientInformationFull,
 		refreshToken string,
 		scopes []string, // 可选，若为空表示未提供 / Optional, empty slice if not provided
 		resource *url.URL, // 可选，若为nil表示未提供 / Optional, nil if not provided
-	) (OAuthTokens, error)
+	) (auth.OAuthTokens, error)
 
 	// VerifyAccessToken 验证访问令牌并返回其相关信息。
 	// Verifies an access token and returns information about it.
@@ -63,7 +67,7 @@ type OAuthServerProvider interface {
 	// Revokes an access or refresh token. If unimplemented, token revocation is not supported (not recommended).
 	// If the given token is invalid or already revoked, this method should do nothing.
 	// 可选方法 / Optional method
-	RevokeToken(client OAuthClientInformationFull, request OAuthTokenRevocationRequest) error
+	RevokeToken(client auth.OAuthClientInformationFull, request auth.OAuthTokenRevocationRequest) error
 
 	// SkipLocalPkceValidation 是否跳过本地PKCE验证。
 	// 如果为true，服务器不会在本地执行PKCE验证，而是将code_verifier传递给上游服务器。
@@ -72,12 +76,10 @@ type OAuthServerProvider interface {
 	// If true, the server will not perform PKCE validation locally and will pass the code_verifier to the upstream server.
 	// NOTE: This should only be true if the upstream server is performing the actual PKCE validation.
 	// 可选字段，默认false / Optional field, defaults to false
+	//fixme 改成实现的结构体字段，而不是接口方法，方便作为配置项扩展
 	SkipLocalPkceValidation() bool
 }
 
 type TokenVerifier interface {
 	VerifyAccessToken(token string) (AuthInfo, error)
-}
-
-type OAuthServerProviderImpl struct {
 }

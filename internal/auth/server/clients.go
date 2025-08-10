@@ -1,4 +1,6 @@
-package auth
+package server
+
+import "trpc.group/trpc-go/trpc-mcp-go/internal/auth"
 
 // OAuthClientsStore 存储有关此服务器注册的OAuth客户端的信息。
 // Stores information about registered OAuth clients for this server.
@@ -7,7 +9,7 @@ type OAuthClientsStore interface {
 	// 如果未找到客户端，返回nil。
 	// Returns information about a registered client, based on its ID.
 	// Returns nil if the client is not found.
-	GetClient(clientId string) (*OAuthClientInformationFull, error)
+	GetClient(clientId string) (*auth.OAuthClientInformationFull, error)
 
 	// RegisterClient 向服务器注册一个新客户端。客户端ID和密钥将由库自动生成。
 	// 可以返回修改后的客户端信息，以反映服务器强制执行的特定值。
@@ -18,7 +20,9 @@ type OAuthClientsStore interface {
 	// NOTE: Implementations should NOT delete expired client secrets in-place. Auth middleware provided by this library will automatically check the `client_secret_expires_at` field and reject requests with expired secrets. Any custom logic for authenticating clients should check the `client_secret_expires_at` field as well.
 	// If unimplemented, dynamic client registration is unsupported.
 	// 可选方法 / Optional method
-	RegisterClient(client OAuthClientInformationPartial) (*OAuthClientInformationFull, error)
+	// todo 可选方法转配置选项
+	// todo 动态客户端注册 / Dynamic client registration
+	RegisterClient(client OAuthClientInformationPartial) (*auth.OAuthClientInformationFull, error)
 }
 
 // OAuthClientInformationPartial 表示不包含 client_id 和 client_id_issued_at 的客户端信息。
