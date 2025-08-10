@@ -55,4 +55,7 @@ var (
 	ErrAlreadyInitialized = errors.New("client already initialized")
 	ErrNotInitialized     = errors.New("client not initialized")
 	ErrInvalidServerURL   = errors.New("invalid server URL")
+
+	// OAuth errors
+	ErrRevokeTokenFailed = errors.New("token revocation failed")
 )
