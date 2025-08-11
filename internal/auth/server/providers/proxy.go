@@ -2,16 +2,27 @@ package providers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 
+	"github.com/go-playground/validator/v10"
 	"trpc.group/trpc-go/trpc-mcp-go/internal/auth"
 	"trpc.group/trpc-go/trpc-mcp-go/internal/auth/server"
 	"trpc.group/trpc-go/trpc-mcp-go/internal/errors"
 )
+
+// validateOAuthTokens 验证OAuthTokens。
+func validateOAuthTokens(tokens *auth.OAuthTokens) error {
+	validate := validator.New()
+	if err := validate.Struct(tokens); err != nil {
+		return fmt.Errorf("validation errors: %v", err)
+	}
+	return nil
+}
 
 // ProxyEndpoints defines the OAuth 2.0/2.1 server endpoints used by the proxy.
 // It contains the URLs for various OAuth operations.
@@ -90,7 +101,7 @@ type ProxyOAuthServerProvider struct {
 
 	// verifyAccessToken 验证访问令牌的函数
 	// Function to verify access tokens
-	verifyAccessToken func(token string) (server.AuthInfo, error)
+	verifyAccessToken func(token string) (*server.AuthInfo, error)
 
 	// getClient 获取客户端信息的函数
 	// Function to fetch client information
@@ -147,7 +158,7 @@ func (p *ProxyOAuthServerProvider) Authorize(client auth.OAuthClientInformationF
 	return nil
 }
 
-func (p *ProxyOAuthServerProvider) VerifyAccessToken(token string) (server.AuthInfo, error) {
+func (p *ProxyOAuthServerProvider) VerifyAccessToken(token string) (*server.AuthInfo, error) {
 	return p.verifyAccessToken(token)
 }
 
@@ -348,6 +359,59 @@ func (p *ProxyOAuthServerProvider) ExchangeRefreshToken(
 	refreshToken string,
 	scopes []string, // 可选，若为空表示未提供 / Optional, empty slice if not provided
 	resource *url.URL, // 可选，若为nil表示未提供 / Optional, nil if not provided
-) (auth.OAuthTokens, error) {
-	return auth.OAuthTokens{}, nil
+) (*auth.OAuthTokens, error) {
+	params := url.Values{
+		"grant_type":    {"refresh_token"},
+		"client_id":     {client.ClientID},
+		"refresh_token": {refreshToken},
+	}
+	if client.ClientSecret != "" {
+		params.Set("client_secret", client.ClientSecret)
+	}
+	if len(scopes) > 0 {
+		params.Set("scope", strings.Join(scopes, " "))
+	}
+	if resource != nil {
+		params.Set("resource", resource.String())
+	}
+
+	// 创建HTTP请求
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, p.endpoints.TokenURL, bytes.NewBufferString(params.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	// 使用自定义fetch或默认HTTP客户端
+	fetch := p.fetch
+	if fetch == nil {
+		fetch = func(url string, req *http.Request) (*http.Response, error) {
+			return http.DefaultClient.Do(req)
+		}
+	}
+
+	// 发送请求
+	resp, err := fetch(p.endpoints.TokenURL, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// 检查响应状态
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("token refresh failed: %v", resp.StatusCode)
+	}
+
+	// 解析响应
+	var data auth.OAuthTokens
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %v", err)
+	}
+
+	// 验证响应数据（使用 validator/v10）
+	if err := validateOAuthTokens(&data); err != nil {
+		return nil, fmt.Errorf("validation failed: %v", err)
+	}
+
+	return data, nil
 }

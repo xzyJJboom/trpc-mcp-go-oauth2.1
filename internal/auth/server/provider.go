@@ -57,11 +57,11 @@ type OAuthServerProvider interface {
 		refreshToken string,
 		scopes []string, // 可选，若为空表示未提供 / Optional, empty slice if not provided
 		resource *url.URL, // 可选，若为nil表示未提供 / Optional, nil if not provided
-	) (auth.OAuthTokens, error)
+	) (*auth.OAuthTokens, error)
 
 	// VerifyAccessToken 验证访问令牌并返回其相关信息。
 	// Verifies an access token and returns information about it.
-	VerifyAccessToken(token string) (AuthInfo, error)
+	VerifyAccessToken(token string) (*AuthInfo, error)
 
 	// SupportTokenRevocation 是否支持令牌撤销。（可选）
 	SupportTokenRevocation
