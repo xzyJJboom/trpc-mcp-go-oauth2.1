@@ -18,7 +18,7 @@ type AuthorizationParams struct {
 }
 
 // OAuthServerProvider 定义了一个完整的OAuth 2.1服务器接口，包含客户端管理、授权流程、令牌交换、验证和撤销等功能。
-// OAuthServerProvider defines a complete OAuth 2.1 server interface, including client management, authorization flow, token exchange, verification, and revocation.
+// defines a complete OAuth 2.1 server interface, including client management, authorization flow, token exchange, verification, and revocation.
 type OAuthServerProvider interface {
 
 	// ClientsStore getter函数:返回用于读取注册OAuth客户端信息的存储。
@@ -26,15 +26,15 @@ type OAuthServerProvider interface {
 	ClientsStore() OAuthClientsStore
 
 	// Authorize 启动授权流程，可以由服务器自身实现或通过重定向到独立的授权服务器。
+	// AuthorizationFlow的入口点，由服务器实现。
 	// 服务器最终必须通过给定的重定向URI发出带有授权响应或错误响应的重定向。根据OAuth 2.1规范：
 	// - 成功情况下，重定向必须包含 `code` 和 `state`（如果提供）查询参数。
 	// - 错误情况下，重定向必须包含 `error` 查询参数，并可以包含可选的 `error_description` 查询参数。
-	// AuthorizationFlow的入口点，由服务器实现。
 	// Begins the authorization flow, which can either be implemented by this server itself or via redirection to a separate authorization server.
 	// This server must eventually issue a redirect with an authorization response or an error response to the given redirect URI. Per OAuth 2.1:
 	// - In the successful case, the redirect MUST include the `code` and `state` (if present) query parameters.
 	// - In the error case, the redirect MUST include the `error` query parameter, and MAY include an optional `error_description` query parameter.
-	Authorize(client auth.OAuthClientInformationFull, params AuthorizationParams, res http.ResponseWriter) error
+	Authorize(client auth.OAuthClientInformationFull, params AuthorizationParams, res http.ResponseWriter, req *http.Request) error
 
 	// ChallengeForAuthorizationCode 返回指定授权开始时使用的 codeChallenge 值。
 	// Returns the `codeChallenge` that was used when the indicated authorization began.
@@ -63,11 +63,11 @@ type OAuthServerProvider interface {
 	// Verifies an access token and returns information about it.
 	VerifyAccessToken(token string) (AuthInfo, error)
 
-	// OAuthServerProviderSupportTokenRevocation 是否支持令牌撤销。（可选）
-	OAuthServerProviderSupportTokenRevocation
+	// SupportTokenRevocation 是否支持令牌撤销。（可选）
+	SupportTokenRevocation
 }
 
-type OAuthServerProviderSupportTokenRevocation interface {
+type SupportTokenRevocation interface {
 	// RevokeToken 撤销访问令牌或刷新令牌。如果未实现，则不支持令牌撤销（不推荐）。
 	// 如果给定的令牌无效或已被撤销，此方法应不执行任何操作。
 	// Revokes an access or refresh token. If unimplemented, token revocation is not supported (not recommended).

@@ -1,17 +1,20 @@
 package server
 
-import "trpc.group/trpc-go/trpc-mcp-go/internal/auth"
+import (
+	"fmt"
+	"trpc.group/trpc-go/trpc-mcp-go/internal/auth"
+)
 
-// OAuthClientsStore 存储有关此服务器注册的OAuth客户端的信息。
+// OAuthClientsStoreInterface 有关此服务器注册的OAuth客户端的的获取与动态注册
 // Stores information about registered OAuth clients for this server.
-type OAuthClientsStore interface {
+type OAuthClientsStoreInterface interface {
 	// GetClient 根据客户端ID返回注册客户端的信息。
 	// 如果未找到客户端，返回nil。
 	// Returns information about a registered client, based on its ID.
 	// Returns nil if the client is not found.
 	GetClient(clientId string) (*auth.OAuthClientInformationFull, error)
 
-	// RegisterClient 向服务器注册一个新客户端。客户端ID和密钥将由库自动生成。
+	// SupportDynamicClientRegistration RegisterClient向服务器注册一个新客户端。客户端ID和密钥将由库自动生成。
 	// 可以返回修改后的客户端信息，以反映服务器强制执行的特定值。
 	// 注意：实现不应直接删除过期的客户端密钥。此库提供的认证中间件会自动检查 `client_secret_expires_at` 字段并拒绝使用过期密钥的请求。任何自定义客户端认证逻辑也应检查 `client_secret_expires_at` 字段。
 	// 如果未实现，则不支持动态客户端注册。
@@ -20,14 +23,39 @@ type OAuthClientsStore interface {
 	// NOTE: Implementations should NOT delete expired client secrets in-place. Auth middleware provided by this library will automatically check the `client_secret_expires_at` field and reject requests with expired secrets. Any custom logic for authenticating clients should check the `client_secret_expires_at` field as well.
 	// If unimplemented, dynamic client registration is unsupported.
 	// 可选方法 / Optional method
-	// todo 可选方法转配置选项
-	// todo 动态客户端注册 / Dynamic client registration
-	RegisterClient(client OAuthClientInformationPartial) (*auth.OAuthClientInformationFull, error)
+	// 可选方法动态客户端注册 / Dynamic client registration
+	SupportDynamicClientRegistration
 }
 
-// OAuthClientInformationPartial 表示不包含 client_id 和 client_id_issued_at 的客户端信息。
-// Used as input for RegisterClient, omitting client_id and client_id_issued_at.
-type OAuthClientInformationPartial struct {
-	// 假设的字段，具体定义依赖于 OAuthClientInformationFull
-	// Placeholder for fields, actual definition depends on OAuthClientInformationFull
+type SupportDynamicClientRegistration interface {
+	RegisterClient(client auth.OAuthClientInformationFull) (*auth.OAuthClientInformationFull, error)
+}
+
+type OAuthClientsStore struct {
+	getClient      func(clientID string) (*auth.OAuthClientInformationFull, error)
+	registerClient func(client auth.OAuthClientInformationFull) (*auth.OAuthClientInformationFull, error)
+}
+
+func (s OAuthClientsStore) GetClient(clientID string) (*auth.OAuthClientInformationFull, error) {
+	return s.getClient(clientID)
+}
+
+func (s OAuthClientsStore) RegisterClient(client auth.OAuthClientInformationFull) (*auth.OAuthClientInformationFull, error) {
+	if s.registerClient == nil {
+		//todo 格式化错误码？
+		return nil, fmt.Errorf("dynamic client registration is not supported")
+	}
+	return s.registerClient(client)
+}
+
+func NewOAuthClientStoreSupportDynamicRegistration(getClient func(clientID string) (*auth.OAuthClientInformationFull, error), registerClient func(client auth.OAuthClientInformationFull) (*auth.OAuthClientInformationFull, error)) *OAuthClientsStore {
+	return &OAuthClientsStore{
+		getClient:      getClient,
+		registerClient: registerClient,
+	}
+}
+func NewOAuthClientStore(getClient func(clientID string) (*auth.OAuthClientInformationFull, error)) *OAuthClientsStore {
+	return &OAuthClientsStore{
+		getClient: getClient,
+	}
 }

@@ -4,7 +4,7 @@
 //
 // trpc-mcp-go is licensed under the Apache License Version 2.0.
 
-// Package mcperrors defines common error types and constants
+// Package errors defines common error types and constants
 package errors
 
 import "errors"
@@ -57,5 +57,20 @@ var (
 	ErrInvalidServerURL   = errors.New("invalid server URL")
 
 	// OAuth errors
-	ErrRevokeTokenFailed = errors.New("token revocation failed")
+	ErrInvalidRequest          = errors.New("invalid request")
+	ErrInvalidClient           = errors.New("invalid client")
+	ErrInvalidGrant            = errors.New("invalid grant")
+	ErrUnauthorizedClient      = errors.New("unauthorized client")
+	ErrUnsupportedGrantType    = errors.New("unsupported grant type")
+	ErrInvalidScope            = errors.New("invalid scope")
+	ErrAccessDenied            = errors.New("access denied")
+	ErrServerError             = errors.New("server error")
+	ErrTemporarilyUnavailable  = errors.New("temporarily unavailable")
+	ErrUnsupportedResponseType = errors.New("unsupported response type")
+	ErrUnsupportedTokenType    = errors.New("unsupported token type")
+	ErrInvalidToken            = errors.New("invalid token")
+	ErrMethodNotAllowed        = errors.New("method not allowed")
+	ErrTooManyRequests         = errors.New("too many requests")
+	ErrInvalidClientMetadata   = errors.New("invalid client metadata")
+	ErrInsufficientScope       = errors.New("insufficient scope")
 )
