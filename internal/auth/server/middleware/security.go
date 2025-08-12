@@ -25,7 +25,7 @@ func AllowedMethods(allowedMethods []string) func(http.Handler) http.Handler {
 			err := &ErrMethodNotAllowed{...}
 			w.Header().Set("Allow", strings.Join(allowedMethods, ", "))
 			w.WriteHeader(http.StatusMethodNotAllowed)
-			mcp.newJSONRPCErrorResponse(req.ID, mcp.ErrCodeInvalidRequest, errors.ErrMethodNotAllowed.Error(), nil)
+			mcp.newJSONRPCErrorResponse(req.ID, mcp.ErrCodeInvalidParams, errors.ErrMethodNotAllowed.Error(), nil)
 		})
 	}
 }
