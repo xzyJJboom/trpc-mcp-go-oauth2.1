@@ -288,13 +288,7 @@ func (p *ProxyOAuthServerProvider) ChallengeForAuthorizationCode(client auth.OAu
 	return "", nil
 }
 
-func (p *ProxyOAuthServerProvider) ExchangeAuthorizationCode(
-	client auth.OAuthClientInformationFull,
-	authorizationCode string,
-	codeVerifier *string, // 可选，若为nil表示未提供 / Optional, nil if not provided
-	redirectUri *string, // 可选，若为nil表示未提供 / Optional, nil if not provided
-	resource *url.URL, // 可选，若为nil表示未提供 / Optional, nil if not provided
-) (auth.OAuthTokens, error) {
+func (p *ProxyOAuthServerProvider) ExchangeAuthorizationCode(client auth.OAuthClientInformationFull, authorizationCode string, codeVerifier *string, redirectUri *string, resource *url.URL) (*auth.OAuthTokens, error) {
 	// 验证 token URL
 	// Validate token URL
 	if p.endpoints.TokenURL == "" {

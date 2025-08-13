@@ -8,13 +8,11 @@ import (
 )
 
 type AuthorizationParams struct {
-	CodeChallenge string // 必需
-	RedirectURI   string // 必需
-
-	//fixme oauth2.1推荐的是必选，但是目前为可选
-	State    string   //可选
-	Scopes   []string // 可选，空切片表示未提供
-	Resource *url.URL // 可选，nil表示未提供
+	CodeChallenge string   `json:"code_challenge"` // 必需
+	RedirectURI   string   `json:"redirect_uri"`   // 必需
+	State         string   `json:"state"`          //optional.An opaque value used by the client to maintain state between the request and callback.
+	Scopes        []string `json:"scopes"`         // 可选，空切片表示未提供
+	Resource      *url.URL `json:"resource"`       // 可选，nil表示未提供
 }
 
 // OAuthServerProvider 定义了一个完整的OAuth 2.1服务器接口，包含客户端管理、授权流程、令牌交换、验证和撤销等功能。
@@ -44,11 +42,10 @@ type OAuthServerProvider interface {
 	// Exchanges an authorization code for an access token.
 	ExchangeAuthorizationCode(
 		client auth.OAuthClientInformationFull,
-		authorizationCode string,
-		codeVerifier *string, // 可选，若为nil表示未提供 / Optional, nil if not provided
-		redirectUri *string, // 可选，若为nil表示未提供 / Optional, nil if not provided
-		resource *url.URL, // 可选，若为nil表示未提供 / Optional, nil if not provided
-	) (auth.OAuthTokens, error)
+		authorizationCode string, codeVerifier *string,
+		redirectUri *string,
+		resource *url.URL,
+	) (*auth.OAuthTokens, error)
 
 	// ExchangeRefreshToken 用刷新令牌交换新的访问令牌。
 	// Exchanges a refresh token for an access token.
