@@ -198,8 +198,7 @@ func (p *ProxyOAuthServerProvider) RevokeToken(client auth.OAuthClientInformatio
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		//fixme
-		return errors.ErrRevokeTokenFailed
+		return errors.NewOAuthError(errors.ErrServerError, fmt.Sprintf("Token revocation failed: %s", resp.Status), "")
 	}
 
 	return nil
@@ -279,7 +278,7 @@ func (p *ProxyOAuthServerProvider) ExchangeAuthorizationCode(client auth.OAuthCl
 	// 验证 token URL
 	// Validate token URL
 	if p.endpoints.TokenURL == "" {
-		return auth.OAuthTokens{}, fmt.Errorf("no token endpoint configured")
+		return nil, fmt.Errorf("no token endpoint configured")
 	}
 	// 构建表单参数
 	// Build form parameters
@@ -305,7 +304,7 @@ func (p *ProxyOAuthServerProvider) ExchangeAuthorizationCode(client auth.OAuthCl
 	// Create HTTP request
 	req, err := http.NewRequest("POST", p.endpoints.TokenURL, bytes.NewReader([]byte(params.Encode())))
 	if err != nil {
-		return auth.OAuthTokens{}, fmt.Errorf("failed to create request: %v", err)
+		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
@@ -313,26 +312,26 @@ func (p *ProxyOAuthServerProvider) ExchangeAuthorizationCode(client auth.OAuthCl
 	// Perform HTTP request
 	resp, err := p.doFetch(req)
 	if err != nil {
-		return auth.OAuthTokens{}, fmt.Errorf("token exchange failed: %v", err)
+		return nil, fmt.Errorf("token exchange failed: %v", err)
 	}
 	defer resp.Body.Close()
 
 	// 检查响应状态
 	// Check response status
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return auth.OAuthTokens{}, &ServerError{Message: fmt.Sprintf("token exchange failed: %d", resp.StatusCode)}
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.NewOAuthError(errors.ErrServerError, fmt.Sprintf("token exchange failed: %s", resp.Status), "")
 	}
 
 	// 解析响应 JSON
 	// Parse response JSON
 	var data auth.OAuthTokens
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return auth.OAuthTokens{}, fmt.Errorf("failed to decode response: %v", err)
+		return nil, fmt.Errorf("failed to decode response: %v", err)
 	}
 
 	// 返回令牌
 	// Return tokens
-	return data, nil
+	return &data, nil
 }
 
 func (p *ProxyOAuthServerProvider) ExchangeRefreshToken(
@@ -379,8 +378,8 @@ func (p *ProxyOAuthServerProvider) ExchangeRefreshToken(
 	defer resp.Body.Close()
 
 	// 检查响应状态
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("token refresh failed: %v", resp.StatusCode)
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.NewOAuthError(errors.ErrServerError, fmt.Sprintf("token refresh failed: %v", resp.StatusCode), "")
 	}
 
 	// 解析响应
@@ -394,10 +393,10 @@ func (p *ProxyOAuthServerProvider) ExchangeRefreshToken(
 		return nil, fmt.Errorf("validation failed: %v", err)
 	}
 
-	return data, nil
+	return &data, nil
 }
 
-// validateOAuthTokens 验证OAuthTokens。
+// validateOAuthTokens 验证OAuthTokens结构体
 func validateOAuthTokens(tokens *auth.OAuthTokens) error {
 	validate := validator.New()
 	if err := validate.Struct(tokens); err != nil {

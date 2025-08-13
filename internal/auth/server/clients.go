@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+
 	"trpc.group/trpc-go/trpc-mcp-go/internal/auth"
 )
 
