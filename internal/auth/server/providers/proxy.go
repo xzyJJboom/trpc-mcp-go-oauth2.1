@@ -15,15 +15,6 @@ import (
 	"trpc.group/trpc-go/trpc-mcp-go/internal/errors"
 )
 
-// validateOAuthTokens 验证OAuthTokens。
-func validateOAuthTokens(tokens *auth.OAuthTokens) error {
-	validate := validator.New()
-	if err := validate.Struct(tokens); err != nil {
-		return fmt.Errorf("validation errors: %v", err)
-	}
-	return nil
-}
-
 // ProxyEndpoints defines the OAuth 2.0/2.1 server endpoints used by the proxy.
 // It contains the URLs for various OAuth operations.
 //
@@ -61,15 +52,6 @@ type ProxyEndpoints struct {
 	// 如果提供，允许客户端动态注册到授权服务器。
 	// "https://auth.example.com/register"
 	RegistrationURL string `json:"registrationUrl,omitempty"`
-
-	// SkipLocalPkceValidation 是否跳过本地PKCE验证。
-	// 如果为true，服务器不会在本地执行PKCE验证，而是将code_verifier传递给上游服务器。
-	// 注意：仅当上游服务器执行实际的PKCE验证时，此值应为true。
-	// Whether to skip local PKCE validation.
-	// If true, the server will not perform PKCE validation locally and will pass the code_verifier to the upstream server.
-	// NOTE: This should only be true if the upstream server is performing the actual PKCE validation.
-	// 可选字段，默认false / Optional field, defaults to false
-	SkipLocalPkceValidation bool `json:"skipLocalPkceValidation,omitempty"`
 }
 
 // ProxyOptions 定义代理OAuth服务器的配置选项
@@ -107,13 +89,18 @@ type ProxyOAuthServerProvider struct {
 	// Function to fetch client information
 	getClient func(clientID string) (*auth.OAuthClientInformationFull, error)
 
+	// SkipLocalPkceValidation 是否跳过本地PKCE验证。
+	// 如果为true，服务器不会在本地执行PKCE验证，而是将code_verifier传递给上游服务器。
+	// 注意：仅当上游服务器执行实际的PKCE验证时，此值应为true。
+	// Whether to skip local PKCE validation.
+	// If true, the server will not perform PKCE validation locally and will pass the code_verifier to the upstream server.
+	// NOTE: This should only be true if the upstream server is performing the actual PKCE validation.
+	// 可选字段，默认false / Optional field, defaults to false
+	SkipLocalPkceValidation bool `json:"skipLocalPkceValidation,omitempty"`
 	// fixme fetch 自定义HTTP请求函数，可选
 	// Custom fetch implementation, optional
-	fetch auth.FetchFunc
 
-	// SkipLocalPkceValidation 跳过本地PKCE验证，默认为true
-	// Skips local PKCE validation, defaults to true
-	SkipLocalPkceValidation bool
+	fetch auth.FetchFunc
 }
 
 // Authorize 处理OAuth授权请求并重定向到授权端点
@@ -408,4 +395,13 @@ func (p *ProxyOAuthServerProvider) ExchangeRefreshToken(
 	}
 
 	return data, nil
+}
+
+// validateOAuthTokens 验证OAuthTokens。
+func validateOAuthTokens(tokens *auth.OAuthTokens) error {
+	validate := validator.New()
+	if err := validate.Struct(tokens); err != nil {
+		return fmt.Errorf("validation errors: %v", err)
+	}
+	return nil
 }
